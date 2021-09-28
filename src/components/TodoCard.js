@@ -1,15 +1,26 @@
 import React from "react";
-// import { useHistory } from "react-router-dom";
 
-const TodoCard = ({ todo, removeTodo, updateTodo }) => {
-    // const { todo } = props;
+const TodoCard = ({ todo, onRemoveTodo, onUpdateTodo }) => {
     const { id, completed, title } = todo;
-    // let history = useHistory();
+
+    const removeTodo = () => { onRemoveTodo(todo) };
+
+    if (todo.expired == 0) {
+        setTimeout(() => {
+            removeTodo();
+        }, 300 * 1000);
+    }
+
+    const updateTodo = () => {
+        todo.completed = !todo.completed;
+        
+        onUpdateTodo(todo)
+    };
 
     return (
         <div className="task-show-area">
             <div className="check-area">
-                <input type="checkbox" className="custom-checkbox" name="checkTodo" id="checkTodo" onClick={updateTodo} />
+                <input type="checkbox" className="custom-checkbox" name="checkTodo" id="checkTodo" onClick={updateTodo} defaultChecked={completed} />
             </div>
             <div className="title-area">
                 {title}

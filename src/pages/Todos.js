@@ -1,12 +1,9 @@
-import axios from "axios";
-import Loading from "../components/Loading";
-import { useState, useEffect } from "react";
-import {useCookies} from "react-cookie";
+import { useState } from "react";
+import { useCookies } from "react-cookie";
 import TodoCard from "../components/TodoCard";
+import Loading from "../components/Loading";
 
 const Todos = () => {
-    // To activate loading loading status will be true
-    // eslint-disable-next-line no-unused-vars
     const [todos, setTodos] = useState([]);
     const [title, setTitleName] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -16,78 +13,62 @@ const Todos = () => {
         setTitleName(event.target.value);
     }
 
-    // useEffect(() => {
-    //     setLoading(true);
-    //     axios.get(process.env.REACT_APP_API_URL + '/todos',{
-    //         withCredentials: true,
-    //     }).then(res => {
-    //         // console.log(res.data);
-    //         const responseTodos = res.data;
-    //         setTodos(responseTodos);
-    //         setLoading(false);
-    //     });
-    // }, []);
-
     const addTodo = () => {
-        // if (taskName === "") return;
+        setLoading(true);
         if (title === "") return;
-
         const todo = {
             id: Math.floor(Math.random() * 10000),
             uuid: cookies["uuid"],
             title: title,
         };
 
-        setTitleName("");
+        setTitleName(" ");
 
         const allTodos = [
             ...todos,
             todo
         ];
 
-        setTodos(allTodos);
-    };
-
-    const updateTodo = task => {
-        const setTodos = todos.map(t => (t.id === task.id) ? task : t);
-
-        setTodos(setTodos);
-    }
-
-    const removedTodo = task => {
-        const setTodos = todos.filter(t => t.id !== task.id);
-
-        setTodos(setTodos);
-    }
-
-    const saveTodos = () => {
-        setLoading(true);
-        // console.log(todos);
-
-        saveTodosInDb(todos)
+        addTodoInDatabase(todo)
             .then(() => {
                 setLoading(false);
             });
+
+        setTodos(allTodos);
+    };
+
+    const removedTodo = task => {
+        const allTodos = todos.filter(t => t.id !== task.id);
+        setTodos(allTodos);
+    }
+
+    const updateTodo = todo => {
+        const allTodos = todos.map(t => (t.id === todo.id) ? todo : t);
+        setTodos(allTodos);
     }
 
     const loadTodos = () => {
         setLoading(true);
-
-        loadTodosFromDb()
+        loadTodosFromDatabase()
             .then(tasks => {
                 setTodos(tasks);
-
                 setLoading(false);
             });
     }
 
     const clearTodos = () => {
         setLoading(true);
-
-        clearTodosFromDb()
+        clearTodosFromDatabase()
             .then(tasks => {
                 setTodos(tasks);
+                setLoading(false);
+            });
+    }
 
+    const saveTodos = () => {
+        setLoading(true);
+        saveTodosInDatabase(todos)
+            .then(() => {
                 setLoading(false);
             });
     }
@@ -103,6 +84,7 @@ const Todos = () => {
                     placeholder="Task Name"
                     className="form-control me-2 me-md-3"
                     onChange={handleChange}
+                    value={title}
                 />
                 <button type="submit" onClick={addTodo}>
                     <svg width="23" height="23" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -114,6 +96,7 @@ const Todos = () => {
                 </button>
             </div>
 
+            {/* Task show area start from here */}
             <>
                 {
                     todos.map((todo) => (
@@ -125,39 +108,66 @@ const Todos = () => {
                 }
             </>
 
-            {/* Task show area start from here */}
-            <div className="task-show-area">
-                <div className="check-area">
-                    <input type="checkbox" className="custom-checkbox" name="checkTask" id="checkTask" />
-                </div>
-                <div className="title-area"> Task number one</div>
-                <div className="delete-area">
-                    <button type="reset">
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                opacity="0.5"
-                                d="M0.37257 4.11132L4.14427 0.339621L10.0698 6.26518L15.9954 0.339621L19.7947 4.13894L13.8691 10.0645L19.7968 15.9922L16.0251 19.7639L10.0974 13.8362L4.14219 19.7914L0.340762 15.99L6.29601 10.0348L0.37257 4.11132Z"
-                                fill="#666E76"
-                            />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-
             {/* Task action area end from here */}
             <div className="task-action-btn">
                 <button onClick={saveTodos}>Save</button>
                 <button onClick={loadTodos}>Load</button>
                 <button onClick={clearTodos}>Clear</button>
             </div>
+
+            {/* Loading Spinner */}
+            {loading && <Loading />}
         </div>
     );
 };
 
-async function saveTodosInDb(todoItems) {
-    let todos = [];
-    console.log(todoItems);
+async function addTodoInDatabase(todo) {
+    await fetch(process.env.REACT_APP_API_URL + '/todos', {
+        method: "POST",
+        credentials: 'include',
+        headers: {
+            'Content-Type': 'Application/json'
+        },
+        body: JSON.stringify({
+            "title": todo.title
+        })
+    })
+        .then(res => {
+            if (res.status !== 200) {
+                throw Error('Error')
+            }
+            return res.json();
+        })
+        .then(response => {
+            todo = response.todo;
+        })
+        .catch(err => {
+            console.log('Error', err);
+        });
 
+    return todo;
+}
+
+async function clearTodosFromDatabase() {
+    await fetch(process.env.REACT_APP_API_URL + '/todos/clear', {
+        method: 'DELETE',
+        credentials: 'include'
+    })
+        .then(res => {
+            if (res.status !== 200) {
+                throw Error('Error')
+            }
+            return res.json();
+        })
+        .catch(err => {
+            console.log('Error', err);
+        });
+
+    return [];
+}
+
+async function saveTodosInDatabase(todoItems) {
+    let todos = [];
     await fetch(process.env.REACT_APP_API_URL + '/todos/save', {
         method: "PUT",
         credentials: 'include',
@@ -170,9 +180,8 @@ async function saveTodosInDb(todoItems) {
     })
         .then(res => {
             if (res.status !== 200) {
-                throw Error('Some error occurred')
+                throw Error('Error')
             }
-
             return res.json();
         })
         .then(response => {
@@ -185,7 +194,7 @@ async function saveTodosInDb(todoItems) {
     return todos;
 }
 
-async function loadTodosFromDb() {
+async function loadTodosFromDatabase() {
     let todos = [];
 
     await fetch(process.env.REACT_APP_API_URL + '/todos', {
@@ -193,15 +202,13 @@ async function loadTodosFromDb() {
     })
         .then(res => {
             if (res.status !== 200) {
-                throw Error('Some error occurred')
+                throw Error('Error')
             }
-
             return res.json();
         })
         .then(response => {
             todos = response.todos.map(t => {
-                t['is_new'] = false
-
+                t['expired'] = true;
                 return t;
             });
         })
@@ -212,22 +219,6 @@ async function loadTodosFromDb() {
     return todos;
 }
 
-async function clearTodosFromDb() {
-    await fetch(process.env.REACT_APP_API_URL + '/todos/clear', {
-        credentials: 'include'
-    })
-        .then(res => {
-            if (res.status !== 200) {
-                throw Error('Some error occurred')
-            }
 
-            return res.json();
-        })
-        .catch(err => {
-            console.log('Error', err);
-        });
-
-    return [];
-}
 
 export default Todos;
